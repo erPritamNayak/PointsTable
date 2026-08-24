@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cricket Points Table</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#7c3aed;--accent-2:#06b6d4;--glass:rgba(255,255,255,0.04)}
+    html,body{height:100%;}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; background:linear-gradient(180deg,#071025 0%, #071827 40%, #071225 100%); color:#e6eef8; display:flex; align-items:center; justify-content:center; padding:24px}
+    .container{width:100%; max-width:980px}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}
+    h1{font-weight:700;margin:0;font-size:20px}
+    .sub{color:var(--muted);font-size:13px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); padding:14px; border-radius:12px; box-shadow:0 6px 30px rgba(2,6,23,0.7)}
+    .table-responsive{overflow:auto}
+    table{width:100%; border-collapse:collapse; margin-top:8px; min-width:680px}
+    thead th{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:700; text-align:left; padding:10px}
+    tbody td{padding:12px 10px; vertical-align:middle}
+    tbody tr{border-top:1px solid rgba(255,255,255,0.03)}
+    .avatar{width:44px;height:44px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;margin-right:10px}
+    .namecell{display:flex;align-items:center}
+    .muted{color:var(--muted);font-size:13px}
+    .pct{font-weight:700;color:#e6eef8}
+    .bar-wrap{height:10px;background:rgba(255,255,255,0.03);border-radius:999px;overflow:hidden;width:140px}
+    .bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%}
+    .rank{font-weight:800;font-size:14px;width:48px;color:var(--muted)}
+    .top{background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06)); border-left:4px solid rgba(124,58,237,0.9)}
+    .sort{cursor:pointer}
+    .sort:after{content:'\2195'; margin-left:8px; font-size:11px; color:var(--muted)}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--glass); border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+    .small{font-size:12px;color:var(--muted)}
+
+    /* Mobile tweaks */
+    @media (max-width:900px){
+      body{padding:16px}
+      .bar-wrap{width:100px}
+      table{min-width:560px}
+    }
+    @media (max-width:600px){
+      .header{flex-direction:column;align-items:flex-start}
+      .controls{width:100%;justify-content:space-between}
+      /* allow horizontal scroll but hide less important columns */
+      .hide-mobile{display:none}
+      table{min-width:480px}
+    }
+    @media (max-width:420px){
+      table{min-width:420px}
+      thead th{padding:8px}
+      tbody td{padding:10px}
+      .avatar{width:38px;height:38px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Cricket Points Table</h1>
+        <div class="sub">Interactive, mobile-friendly points table</div>
+      </div>
+      <div class="controls">
+        <div class="small">Matches: <strong id="totalMatches">0</strong></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="resetBtn">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table id="pointsTable">
+          <thead>
+            <tr>
+              <th class="sort" data-key="rank">#</th>
+              <th class="sort" data-key="name">Name</th>
+              <th class="sort" data-key="played">Played</th>
+              <th class="sort" data-key="won">Won</th>
+              <th class="sort hide-mobile" data-key="lost">Lost</th>
+              <th class="sort hide-mobile" data-key="draw">Draw</th>
+              <th class="sort" data-key="winPerc">Win %</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const teams = [
+      {name:'Pritam', played:2, won:0, lost:2, draw:0},
+      {name:'Polard', played:2, won:2, lost:0, draw:0},
+      {name:'Basu', played:0, won:0, lost:0, draw:0},
+      {name:'Sujit', played:0, won:0, lost:0, draw:0},
+      {name:'Bunty', played:0, won:0, lost:0, draw:0}
+    ];
+
+    function computeStats(list){
+      return list.map(t=>{
+        const winPerc = t.played? Math.round((t.won / t.played) * 100) : 0;
+        const points = t.won*2 + t.draw*1;
+        return {...t, winPerc, points};
+      });
+    }
+
+    let data = computeStats(teams);
+    const tbody = document.querySelector('#pointsTable tbody');
+    const totalMatchesEl = document.getElementById('totalMatches');
+
+    function render(list){
+      const sorted = [...list].sort((a,b)=>{
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.winPerc !== a.winPerc) return b.winPerc - a.winPerc;
+        if (b.won !== a.won) return b.won - a.won;
+        return a.name.localeCompare(b.name);
+      });
+      tbody.innerHTML = '';
+      sorted.forEach((t, i)=>{
+        const tr = document.createElement('tr');
+        if(i===0) tr.classList.add('top');
+        const rankTd = `<td class="rank">${i+1}</td>`;
+        const avatarColor = nameToColor(t.name);
+        const initials = t.name.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+        const nameTd = `<td><div class="namecell"><div class="avatar" style="background:${avatarColor};">${initials}</div><div><div style="font-weight:700">${t.name}</div><div class="muted">Points: ${t.points} • Won ${t.won}</div></div></div></td>`;
+        const playedTd = `<td>${t.played}</td>`;
+        const wonTd = `<td>${t.won}</td>`;
+        const lostTd = `<td class="hide-mobile">${t.lost}</td>`;
+        const drawTd = `<td class="hide-mobile">${t.draw}</td>`;
+        const winTd = `<td><div style="display:flex;align-items:center;gap:10px"><div class="bar-wrap" aria-hidden><div class="bar" style="width:${t.played? t.winPerc:0}%"></div></div><div class="pct">${t.played? t.winPerc + '%':'-'}</div></div></td>`;
+        tr.innerHTML = rankTd + nameTd + playedTd + wonTd + lostTd + drawTd + winTd;
+        tbody.appendChild(tr);
+      });
+      const totalMatches = list.reduce((s,x)=>s + (x.played||0),0)/2;
+      totalMatchesEl.textContent = Math.round(totalMatches);
+    }
+
+    function nameToColor(name){
+      const colors = ['#7c3aed','#06b6d4','#f97316','#ef4444','#10b981','#eab308'];
+      let h=0; for(let i=0;i<name.length;i++) h = (h<<5) - h + name.charCodeAt(i);
+      return colors[Math.abs(h) % colors.length];
+    }
+
+    render(data);
+
+    document.querySelectorAll('thead th.sort').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const key = th.dataset.key;
+        sortBy(key);
+      });
+    });
+
+    let lastSort = null;
+    function sortBy(key){
+      const dir = lastSort && lastSort.key === key && lastSort.dir === 'desc' ? 'asc' : 'desc';
+      lastSort = {key, dir};
+      const sorted = [...data].sort((a,b)=>{
+        let A = a[key]; let B = b[key];
+        if(key === 'name') { A = A.toLowerCase(); B = B.toLowerCase(); return dir==='desc'? A.localeCompare(B) : B.localeCompare(A); }
+        if(typeof A === 'undefined') A = 0; if(typeof B === 'undefined') B = 0;
+        return dir==='desc' ? B - A : A - B;
+      });
+      render(sorted);
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      lastSort = null; data = computeStats(teams); render(data);
+    });
+  </script>
+</body>
+</html>
