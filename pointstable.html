@@ -4,69 +4,401 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Cricket Points Table — Fancy View</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#7c3aed;--accent-2:#06b6d4;--glass:rgba(255,255,255,0.04)}
-    html,body{height:100%;}
-    body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; background:linear-gradient(180deg,#071025 0%, #071827 40%, #071225 100%); color:#e6eef8; display:flex; align-items:center; justify-content:center; padding:32px}
-    .container{width:100%; max-width:980px}
-    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-    h1{font-weight:700;margin:0;font-size:20px;letter-spacing:-0.01em}
-    .sub{color:var(--muted);font-size:13px}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); padding:18px; border-radius:12px; box-shadow:0 6px 30px rgba(2,6,23,0.7)}
-    table{width:100%; border-collapse:collapse; margin-top:12px}
-    thead th{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:700; text-align:left; padding:12px 10px}
-    tbody td{padding:14px 10px; vertical-align:middle}
-    tbody tr{border-top:1px solid rgba(255,255,255,0.03)}
-    .avatar{width:44px;height:44px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;margin-right:10px}
-    .namecell{display:flex;align-items:center}
-    .muted{color:var(--muted);font-size:13px}
-    .pct{font-weight:700;color:#e6eef8}
-    .bar-wrap{height:10px;background:rgba(255,255,255,0.03);border-radius:999px;overflow:hidden;width:130px}
-    .bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%}
-    .rank{font-weight:800;font-size:14px;width:48px;color:var(--muted)}
-    .top{background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06)); border-left:4px solid rgba(124,58,237,0.9)}
-    .sort{cursor:pointer}
-    .sort:after{content:'\2195'; margin-left:8px; font-size:11px; color:var(--muted)}
-    .controls{display:flex;gap:8px}
-    .btn{background:var(--glass); border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
-    .small{font-size:12px;color:var(--muted)}
-    @media (max-width:720px){ .bar-wrap{width:90px} .namecell .muted{display:none} }
+    :root {
+      --ink: #102418;
+      --muted: #4a6354;
+      --surface: rgba(255, 252, 245, 0.92);
+      --line: rgba(16, 36, 24, 0.12);
+      --accent: #1f7a45;
+      --accent-hot: #d4a017;
+      --top-glow: rgba(31, 122, 69, 0.14);
+      --shadow: 0 18px 40px rgba(12, 40, 22, 0.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 90% 60% at 10% -10%, rgba(212, 160, 23, 0.28), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(31, 122, 69, 0.35), transparent 50%),
+        linear-gradient(165deg, #e8f5e9 0%, #d4e8d0 38%, #c5dcc0 100%);
+      background-attachment: fixed;
+      overflow-x: auto;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.35;
+      background-image:
+        repeating-linear-gradient(
+          90deg,
+          transparent 0,
+          transparent 47px,
+          rgba(16, 36, 24, 0.03) 47px,
+          rgba(16, 36, 24, 0.03) 48px
+        );
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+      min-height: 100vh;
+    }
+
+    .brand {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(2.6rem, 9vw, 4.2rem);
+      letter-spacing: 0.04em;
+      line-height: 0.95;
+      margin: 0 0 6px;
+      color: var(--ink);
+      animation: rise 0.7s ease-out both;
+    }
+
+    .tagline {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      max-width: 28rem;
+      animation: rise 0.7s ease-out 0.08s both;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      animation: rise 0.7s ease-out 0.16s both;
+    }
+
+    .stat {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .stat strong {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1.5px solid var(--ink);
+      background: var(--ink);
+      color: #f7fff8;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+
+    .btn:hover {
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .board {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 0;
+      animation: rise 0.75s ease-out 0.24s both;
+    }
+
+    .scroll-hint {
+      display: none;
+      padding: 10px 14px 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scrollbar-color: var(--accent) transparent;
+    }
+
+    .table-scroll::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 999px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      margin: 0;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f3faf3;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 2px solid var(--line);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 14px 12px;
+      vertical-align: middle;
+      border-top: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      transition: background 0.2s ease;
+    }
+
+    tbody tr:hover {
+      background: rgba(31, 122, 69, 0.06);
+    }
+
+    .top {
+      background: linear-gradient(90deg, var(--top-glow), transparent 70%);
+      border-left: 4px solid var(--accent);
+    }
+
+    .rank {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.35rem;
+      letter-spacing: 0.04em;
+      width: 40px;
+      color: var(--muted);
+    }
+
+    .top .rank {
+      color: var(--accent);
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+      margin-right: 12px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(16, 36, 24, 0.2);
+    }
+
+    .namecell {
+      display: flex;
+      align-items: center;
+    }
+
+    .player-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 2px;
+    }
+
+    .pct {
+      font-weight: 700;
+      min-width: 2.5rem;
+    }
+
+    .bar-wrap {
+      height: 8px;
+      background: rgba(16, 36, 24, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      width: 120px;
+    }
+
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-hot));
+      border-radius: inherit;
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .win-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sort {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sort::after {
+      content: "↕";
+      margin-left: 6px;
+      font-size: 0.65rem;
+      opacity: 0.55;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .page {
+        padding: 20px 12px 56px;
+      }
+
+      .brand {
+        font-size: clamp(2.4rem, 12vw, 3.4rem);
+      }
+
+      .scroll-hint {
+        display: block;
+      }
+
+      .table-scroll {
+        max-height: min(70vh, 520px);
+        overflow-y: auto;
+        overflow-x: auto;
+      }
+
+      table {
+        min-width: 680px;
+      }
+
+      thead th,
+      tbody td {
+        padding: 12px 10px;
+      }
+
+      .bar-wrap {
+        width: 90px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .page {
+        padding: 16px 10px 64px;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      .table-scroll {
+        max-height: 62vh;
+      }
+
+      table {
+        min-width: 640px;
+      }
+
+      .avatar {
+        width: 36px;
+        height: 36px;
+        margin-right: 10px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div>
-        <h1>Cricket Points Table</h1>
-        <div class="sub">Interactive view with win percentage bars and sorting</div>
-      </div>
-      <div class="controls">
-        <div class="small">Matches recorded: <strong id="totalMatches">0</strong></div>
-        <button class="btn" id="resetBtn">Reset sort</button>
-      </div>
+  <div class="page">
+    <h1 class="brand">Cricket Points Table</h1>
+    <p class="tagline">Interactive board with win bars and sorting — swipe sideways on mobile, scroll vertically for rows.</p>
+
+    <div class="toolbar">
+      <div class="stat">Matches recorded: <strong id="totalMatches">0</strong></div>
+      <button class="btn" type="button" id="resetBtn">Reset sort</button>
     </div>
 
-    <div class="card">
-      <table id="pointsTable">
-        <thead>
-          <tr>
-            <th class="sort" data-key="rank">#</th>
-            <th class="sort" data-key="name">Name</th>
-            <th class="sort" data-key="played">Played</th>
-            <th class="sort" data-key="won">Won</th>
-            <th class="sort" data-key="lost">Lost</th>
-            <th class="sort" data-key="draw">Draw</th>
-            <th class="sort" data-key="winPerc">Win %</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <div class="board">
+      <div class="scroll-hint">← Scroll table horizontally · scroll vertically for more rows →</div>
+      <div class="table-scroll" tabindex="0" aria-label="Points table, scrollable">
+        <table id="pointsTable">
+          <thead>
+            <tr>
+              <th class="sort" data-key="rank">#</th>
+              <th class="sort" data-key="name">Name</th>
+              <th class="sort" data-key="played">Played</th>
+              <th class="sort" data-key="won">Won</th>
+              <th class="sort" data-key="lost">Lost</th>
+              <th class="sort" data-key="draw">Draw</th>
+              <th class="sort" data-key="points">Pts</th>
+              <th class="sort" data-key="winPerc">Win %</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <script>
-    // Teams initial state per your data: Pritam lost 2, Polard won 2. Others haven't played.
     const teams = [
       {name:'Pritam', played:2, won:0, lost:2, draw:0},
       {name:'Polard', played:2, won:2, lost:0, draw:0},
@@ -75,22 +407,19 @@
       {name:'Bunty', played:0, won:0, lost:0, draw:0}
     ];
 
-    // Compute derived fields and initial rank ordering by win% then won then name
     function computeStats(list){
       return list.map(t=>{
         const winPerc = t.played? Math.round((t.won / t.played) * 100) : 0;
-        const points = t.won*2 + t.draw*1; // simple points system (optional)
+        const points = t.won*2 + t.draw*1;
         return {...t, winPerc, points};
       });
     }
 
     let data = computeStats(teams);
-
     const tbody = document.querySelector('#pointsTable tbody');
     const totalMatchesEl = document.getElementById('totalMatches');
 
     function render(list){
-      // sort by points then winPerc then won by default for ranking
       const sorted = [...list].sort((a,b)=>{
         if (b.points !== a.points) return b.points - a.points;
         if (b.winPerc !== a.winPerc) return b.winPerc - a.winPerc;
@@ -101,36 +430,34 @@
       sorted.forEach((t, i)=>{
         const tr = document.createElement('tr');
         if(i===0) tr.classList.add('top');
-        const rankTd = `<td class="rank">${i+1}</td>`;
         const avatarColor = nameToColor(t.name);
         const initials = t.name.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
-        const nameTd = `<td><div class="namecell"><div class="avatar" style="background:${avatarColor};">${initials}</div><div><div style="font-weight:700">${t.name}</div><div class="muted">Points: ${t.points} • Won ${t.won}</div></div></div></td>`;
-        const playedTd = `<td>${t.played}</td>`;
-        const wonTd = `<td>${t.won}</td>`;
-        const lostTd = `<td>${t.lost}</td>`;
-        const drawTd = `<td>${t.draw}</td>`;
-        const winTd = `<td><div style="display:flex;align-items:center;gap:10px"><div class="bar-wrap" aria-hidden><div class="bar" style="width:${t.played? t.winPerc:0}%"></div></div><div class="pct">${t.played? t.winPerc + '%':'-'}</div></div></td>`;
-        tr.innerHTML = rankTd + nameTd + playedTd + wonTd + lostTd + drawTd + winTd;
+        tr.innerHTML =
+          `<td class="rank">${i+1}</td>` +
+          `<td><div class="namecell"><div class="avatar" style="background:${avatarColor};">${initials}</div><div><div class="player-name">${t.name}</div><div class="muted">Points: ${t.points} · Won ${t.won}</div></div></div></td>` +
+          `<td>${t.played}</td>` +
+          `<td>${t.won}</td>` +
+          `<td>${t.lost}</td>` +
+          `<td>${t.draw}</td>` +
+          `<td><strong>${t.points}</strong></td>` +
+          `<td><div class="win-cell"><div class="bar-wrap" aria-hidden="true"><div class="bar" style="width:${t.played? t.winPerc:0}%"></div></div><div class="pct">${t.played? t.winPerc + '%':'-'}</div></div></td>`;
         tbody.appendChild(tr);
       });
-      const totalMatches = list.reduce((s,x)=>s + (x.played||0),0)/2; // each match counted twice across teams -> divide by 2
+      const totalMatches = list.reduce((s,x)=>s + (x.played||0),0)/2;
       totalMatchesEl.textContent = Math.round(totalMatches);
     }
 
     function nameToColor(name){
-      // deterministically pick a pleasant color per name
-      const colors = ['#7c3aed','#06b6d4','#f97316','#ef4444','#10b981','#eab308'];
+      const colors = ['#1f7a45','#0e5c8c','#c45c26','#b91c1c','#0f766e','#a16207'];
       let h=0; for(let i=0;i<name.length;i++) h = (h<<5) - h + name.charCodeAt(i);
       return colors[Math.abs(h) % colors.length];
     }
 
     render(data);
 
-    // Sorting interactions on headers
     document.querySelectorAll('thead th.sort').forEach(th=>{
       th.addEventListener('click', ()=>{
-        const key = th.dataset.key;
-        sortBy(key);
+        sortBy(th.dataset.key);
       });
     });
 
@@ -140,17 +467,26 @@
       lastSort = {key, dir};
       const sorted = [...data].sort((a,b)=>{
         let A = a[key]; let B = b[key];
-        if(key === 'name') { A = A.toLowerCase(); B = B.toLowerCase(); return dir==='desc'? A.localeCompare(B) : B.localeCompare(A); }
-        if(typeof A === 'undefined') A = 0; if(typeof B === 'undefined') B = 0;
+        if(key === 'name') {
+          A = A.toLowerCase();
+          B = B.toLowerCase();
+          return dir==='desc'? A.localeCompare(B) : B.localeCompare(A);
+        }
+        if(key === 'rank') {
+          return dir==='desc' ? (a.points - b.points) : (b.points - a.points);
+        }
+        if(typeof A === 'undefined') A = 0;
+        if(typeof B === 'undefined') B = 0;
         return dir==='desc' ? B - A : A - B;
       });
       render(sorted);
     }
 
     document.getElementById('resetBtn').addEventListener('click', ()=>{
-      lastSort = null; data = computeStats(teams); render(data);
+      lastSort = null;
+      data = computeStats(teams);
+      render(data);
     });
-
   </script>
 </body>
 </html>
