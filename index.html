@@ -291,6 +291,92 @@
       opacity: 0.55;
     }
 
+    .player-row {
+      cursor: pointer;
+    }
+
+    .player-row.expanded {
+      background: rgba(31, 122, 69, 0.1);
+    }
+
+    .player-row .chevron {
+      margin-left: auto;
+      padding-left: 10px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+
+    .player-row.expanded .chevron {
+      transform: rotate(90deg);
+    }
+
+    .history-row td {
+      padding: 0 12px 14px 64px;
+      border-top: none;
+      white-space: normal;
+      background: rgba(31, 122, 69, 0.04);
+    }
+
+    .match-history {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 0 2px;
+    }
+
+    .match-history-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .match-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.84rem;
+    }
+
+    .match-opponent {
+      font-weight: 600;
+    }
+
+    .result-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .result-badge.won {
+      background: rgba(31, 122, 69, 0.15);
+      color: #14532d;
+    }
+
+    .result-badge.lost {
+      background: rgba(185, 28, 28, 0.12);
+      color: #991b1b;
+    }
+
+    .result-badge.draw {
+      background: rgba(16, 36, 24, 0.1);
+      color: var(--muted);
+    }
+
+    .no-matches {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
     @keyframes rise {
       from {
         opacity: 0;
@@ -369,7 +455,7 @@
 <body>
   <div class="page">
     <h1 class="brand">Cricket Points Table</h1>
-    <p class="tagline">Swipe the board sideways on phones — scroll up and down when the list runs long.</p>
+    <p class="tagline">Tap a player row to see who they played and whether they won or lost. Swipe sideways on phones.</p>
 
     <div class="toolbar">
       <div class="stat">Matches played: <strong id="totalMatches">0</strong></div>
@@ -408,6 +494,38 @@
       {name:'Dinesh', played:1, won:0, lost:1, draw:0}
     ];
 
+    const fixtures = [
+      { p1: 'Bunty', p2: 'Pritam', winner: 'Bunty' },
+      { p1: 'Bunty', p2: 'Sujit', winner: 'Bunty' },
+      { p1: 'Polard', p2: 'Pritam', winner: 'Polard' },
+      { p1: 'Polard', p2: 'Pritam', winner: 'Polard' },
+      { p1: 'Sujit', p2: 'Dinesh', winner: 'Sujit' }
+    ];
+
+    function getPlayerMatches(playerName) {
+      return fixtures
+        .filter(f => f.p1 === playerName || f.p2 === playerName)
+        .map(f => {
+          const opponent = f.p1 === playerName ? f.p2 : f.p1;
+          const result = f.winner === playerName ? 'won' : f.winner ? 'lost' : 'draw';
+          return { opponent, result };
+        });
+    }
+
+    function matchHistoryHtml(matches) {
+      if (!matches.length) {
+        return '<div class="no-matches">No matches played yet</div>';
+      }
+      return '<div class="match-history-title">Match history</div>' +
+        matches.map((m, i) =>
+          `<div class="match-item">` +
+            `<span class="muted">#${i + 1}</span>` +
+            `<span>vs <span class="match-opponent">${m.opponent}</span></span>` +
+            `<span class="result-badge ${m.result}">${m.result}</span>` +
+          `</div>`
+        ).join('');
+    }
+
     function computeStats(list){
       return list.map(t=>{
         const winPerc = t.played? Math.round((t.won / t.played) * 100) : 0;
@@ -417,34 +535,54 @@
     }
 
     let data = computeStats(teams);
+    let displayData = data;
+    let expandedPlayer = null;
     const tbody = document.querySelector('#pointsTable tbody');
     const totalMatchesEl = document.getElementById('totalMatches');
 
-    function render(list){
-      const sorted = [...list].sort((a,b)=>{
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.winPerc !== a.winPerc) return b.winPerc - a.winPerc;
-        if (b.won !== a.won) return b.won - a.won;
-        return a.name.localeCompare(b.name);
-      });
+    function defaultSort(a, b) {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.winPerc !== a.winPerc) return b.winPerc - a.winPerc;
+      if (b.won !== a.won) return b.won - a.won;
+      return a.name.localeCompare(b.name);
+    }
+
+    function render(list, preserveOrder) {
+      const sorted = preserveOrder ? [...list] : [...list].sort(defaultSort);
       tbody.innerHTML = '';
-      sorted.forEach((t, i)=>{
+      sorted.forEach((t, i) => {
         const tr = document.createElement('tr');
-        if(i===0) tr.classList.add('top');
+        tr.classList.add('player-row');
+        if (i === 0) tr.classList.add('top');
+        if (expandedPlayer === t.name) tr.classList.add('expanded');
+        tr.setAttribute('aria-expanded', expandedPlayer === t.name ? 'true' : 'false');
         const avatarColor = nameToColor(t.name);
-        const initials = t.name.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+        const initials = t.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        const matches = getPlayerMatches(t.name);
         tr.innerHTML =
-          `<td class="rank">${i+1}</td>` +
-          `<td><div class="namecell"><div class="avatar" style="background:${avatarColor};">${initials}</div><div><div class="player-name">${t.name}</div><div class="muted">Points: ${t.points} · Won ${t.won}</div></div></div></td>` +
+          `<td class="rank">${i + 1}</td>` +
+          `<td><div class="namecell"><div class="avatar" style="background:${avatarColor};">${initials}</div><div><div class="player-name">${t.name}</div><div class="muted">Points: ${t.points} · Won ${t.won}</div></div><span class="chevron" aria-hidden="true">▸</span></div></td>` +
           `<td>${t.played}</td>` +
           `<td>${t.won}</td>` +
           `<td>${t.lost}</td>` +
           `<td>${t.draw}</td>` +
           `<td><strong>${t.points}</strong></td>` +
-          `<td><div class="win-cell"><div class="bar-wrap" aria-hidden="true"><div class="bar" style="width:${t.played? t.winPerc:0}%"></div></div><div class="pct">${t.played? t.winPerc + '%':'-'}</div></div></td>`;
+          `<td><div class="win-cell"><div class="bar-wrap" aria-hidden="true"><div class="bar" style="width:${t.played ? t.winPerc : 0}%"></div></div><div class="pct">${t.played ? t.winPerc + '%' : '-'}</div></div></td>`;
+        tr.addEventListener('click', () => {
+          expandedPlayer = expandedPlayer === t.name ? null : t.name;
+          render(sorted, true);
+        });
         tbody.appendChild(tr);
+
+        if (expandedPlayer === t.name) {
+          const historyTr = document.createElement('tr');
+          historyTr.classList.add('history-row');
+          historyTr.innerHTML =
+            `<td colspan="8"><div class="match-history">${matchHistoryHtml(matches)}</div></td>`;
+          tbody.appendChild(historyTr);
+        }
       });
-      const totalMatches = list.reduce((s,x)=>s + (x.played||0),0)/2;
+      const totalMatches = data.reduce((s, x) => s + (x.played || 0), 0) / 2;
       totalMatchesEl.textContent = Math.round(totalMatches);
     }
 
@@ -454,39 +592,42 @@
       return colors[Math.abs(h) % colors.length];
     }
 
-    render(data);
+    render(displayData);
 
-    document.querySelectorAll('thead th.sort').forEach(th=>{
-      th.addEventListener('click', ()=>{
+    document.querySelectorAll('thead th.sort').forEach(th => {
+      th.addEventListener('click', () => {
         sortBy(th.dataset.key);
       });
     });
 
     let lastSort = null;
-    function sortBy(key){
+    function sortBy(key) {
       const dir = lastSort && lastSort.key === key && lastSort.dir === 'desc' ? 'asc' : 'desc';
-      lastSort = {key, dir};
-      const sorted = [...data].sort((a,b)=>{
-        let A = a[key]; let B = b[key];
-        if(key === 'name') {
+      lastSort = { key, dir };
+      displayData = [...data].sort((a, b) => {
+        let A = a[key];
+        let B = b[key];
+        if (key === 'name') {
           A = A.toLowerCase();
           B = B.toLowerCase();
-          return dir==='desc'? A.localeCompare(B) : B.localeCompare(A);
+          return dir === 'desc' ? A.localeCompare(B) : B.localeCompare(A);
         }
-        if(key === 'rank') {
-          return dir==='desc' ? (a.points - b.points) : (b.points - a.points);
+        if (key === 'rank') {
+          return dir === 'desc' ? (a.points - b.points) : (b.points - a.points);
         }
-        if(typeof A === 'undefined') A = 0;
-        if(typeof B === 'undefined') B = 0;
-        return dir==='desc' ? B - A : A - B;
+        if (typeof A === 'undefined') A = 0;
+        if (typeof B === 'undefined') B = 0;
+        return dir === 'desc' ? B - A : A - B;
       });
-      render(sorted);
+      render(displayData, true);
     }
 
-    document.getElementById('resetBtn').addEventListener('click', ()=>{
+    document.getElementById('resetBtn').addEventListener('click', () => {
       lastSort = null;
+      expandedPlayer = null;
       data = computeStats(teams);
-      render(data);
+      displayData = data;
+      render(displayData);
     });
   </script>
 </body>
